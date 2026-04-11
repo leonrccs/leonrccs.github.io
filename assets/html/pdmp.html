@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Surrogate-enhanced Zig-Zag sampler demo</title>
+  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+  <style>
+    :root{
+      --bg:#ffffff; --fg:#1f2937; --muted:#6b7280; --panel:#f8fafc; --border:#d1d5db;
+      --accent:#2563eb; --gold:#d97706;
+    }
+    html,body{ width:100%; }
+    body{ margin:0; font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; color:var(--fg); background:var(--bg);}
+    .wrap{ width:100%; max-width:none; margin:0; padding:14px;}
+    .title{ margin-bottom:8px;}
+    .title h1{ margin:0 0 2px 0; font-size:22px; font-weight:700; letter-spacing:-0.02em;}
+    .title p{ margin:0; color:var(--muted); line-height:1.35; max-width:980px; font-size:13px;}
+    .layout{ display:grid; grid-template-columns:minmax(0,1fr) minmax(280px,340px); gap:14px; align-items:start;}
+    .panel{ background:var(--panel); border:1px solid var(--border); border-radius:16px; box-shadow:0 8px 24px rgba(0,0,0,0.04);}
+    .viz-panel{ padding:10px 10px 8px 10px;}
+    .controls{ padding:12px;}
+    .controls h2{ margin:0 0 8px 0; font-size:16px; font-weight:700;}
+    .control{ margin-bottom:10px;}
+    label{ display:block; font-size:13px; font-weight:600; margin-bottom:6px;}
+    input[type="range"]{ width:100%;}
+    .value{ font-weight:700; color:var(--accent);}
+    button{ appearance:none; border:none; background:var(--accent); color:white; padding:10px 12px; width:100%; border-radius:12px; font-size:14px; font-weight:700; cursor:pointer; transition:transform .05s ease, opacity .15s ease;}
+    button:hover{ opacity:.95;} button:active{ transform:translateY(1px);} button:disabled{ opacity:.5; cursor:not-allowed;}
+    .small-btn{ background:#e5e7eb; color:#111827; margin-top:10px;}
+    .checkbox{ display:flex; align-items:center; gap:8px; font-size:13px; color:var(--fg); margin:7px 0;}
+    .checkbox input{ width:16px; height:16px;}
+    .stats{ margin-top:12px; padding-top:10px; border-top:1px solid var(--border); font-size:13px; line-height:1.45;}
+    .stats .row{ display:flex; justify-content:space-between; gap:14px; margin:5px 0;}
+    .stats .k{ color:var(--muted);}
+    .legend{ display:flex; flex-wrap:wrap; gap:10px; margin:8px 2px 0 2px; font-size:12px; color:var(--muted);}
+    .legend-item{ display:flex; align-items:center; gap:7px;}
+    .swatch{ width:22px; height:3px; border-radius:999px; display:inline-block;}
+    .swatch-dot{ width:11px; height:11px; border-radius:50%; display:inline-block; border:1px solid rgba(0,0,0,0.2);}
+    .caption{ margin-top:8px; color:var(--muted); font-size:12px; line-height:1.35;}
+    .footer-note{ margin-top:10px; font-size:11px; color:var(--muted); line-height:1.35;}
+    svg{ width:100%; height:auto; display:block; background:white; border-radius:12px;}
+    .axis path,.axis line{ stroke:#cbd5e1;}
+    .axis text{ fill:#6b7280; font-size:12px;}
+    .handle{ cursor:grab;} .handle:active{ cursor:grabbing;}
+    .mono{ font-family:ui-monospace,SFMono-Regular,Menlo,monospace;}
+    @media (max-width:680px){ .layout{ grid-template-columns:1fr; } .wrap{padding:10px;} }
+    body.embed-mode .title,
+    body.embed-mode .footer-note{ display:none; }
+    body.embed-mode .wrap{ padding:8px; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="title">
+    <h1>Surrogate-enhanced Zig-Zag sampler demo</h1>
+    <p>
+      Drag the orange Gaussian means to create a smooth unimodal or multimodal posterior in 2D.
+      Adjust the shared variance, choose the number of initial surrogate samples, and run a lightweight browser demo
+      of a surrogate-assisted Zig-Zag sampler with offset-corrected thinning.
+    </p>
+  </div>
+
+  <div class="layout">
+    <div class="panel viz-panel">
+      <svg id="viz" viewBox="0 0 700 500" aria-label="Interactive posterior and sampler visualization"></svg>
+      <div class="legend">
+        <div class="legend-item"><span class="swatch" style="background:#3b82f6;"></span> ground-truth contours</div>
+        <div class="legend-item"><span class="swatch" style="background:#ef4444;"></span> surrogate contours</div>
+        <div class="legend-item"><span class="swatch" style="background:#111827;"></span> zig-zag trajectory</div>
+        <div class="legend-item"><span class="swatch-dot" style="background:#f59e0b;"></span> draggable Gaussian means</div>
+        <div class="legend-item"><span class="swatch-dot" style="background:#16a34a;"></span> initial GP samples</div>
+      </div>
+    </div>
+
+    <div class="panel controls">
+      <h2>Controls</h2>
+
+      <div class="control">
+        <label for="varianceSlider">Shared Gaussian variance: <span class="value" id="varianceValue">0.55</span></label>
+        <input id="varianceSlider" type="range" min="0.18" max="1.50" step="0.01" value="0.55" />
+      </div>
+
+      <div class="control">
+        <label for="gpSamples">Initial GP samples: <span class="value" id="gpSamplesValue">14</span></label>
+        <input id="gpSamples" type="range" min="6" max="40" step="1" value="14" />
+      </div>
+
+      <div class="control">
+        <label for="events">Number of proposed events: <span class="value" id="eventsValue">900</span></label>
+        <input id="events" type="range" min="100" max="10000" step="50" value="900" />
+      </div>
+
+      <div class="control">
+        <label class="checkbox"><input id="showSurrogate" type="checkbox" /> Show GP contours</label>
+        <label class="checkbox"><input id="showSamples" type="checkbox" /> Show initial GP samples</label>
+      </div>
+
+      <div class="control">
+        <button id="runBtn">Run inference</button>
+        <button id="resetBtn" class="small-btn">Reset posterior</button>
+      </div>
+
+      <div class="stats" id="stats">
+        <div class="row"><div class="k">Status</div><div id="stat-status">ready</div></div>
+        <div class="row"><div class="k">Accepted events</div><div id="stat-accepted">0</div></div>
+        <div class="row"><div class="k">Offset violations</div><div id="stat-violations">0</div></div>
+      </div>
+
+      <div class="footer-note">
+        For website embedding later, this file can be placed in <span class="mono">assets/html/</span> and inserted with an
+        <span class="mono">&lt;iframe&gt;</span> just like your other interactive widgets.
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+
+(() => {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("embed") === "1") {
+    document.body.classList.add("embed-mode");
+  }
+})();
+
+(() => {
+  const svg = d3.select("#viz");
+  const W = 700, H = 500;
+  const margin = {top:24, right:28, bottom:44, left:58};
+  const plotW = W - margin.left - margin.right;
+  const plotH = H - margin.top - margin.bottom;
+  const xDomain = [-6.4, 6.4];
+  const yDomain = [-5.6, 5.6];
+  const x = d3.scaleLinear().domain(xDomain).range([margin.left, margin.left + plotW]);
+  const y = d3.scaleLinear().domain(yDomain).range([margin.top + plotH, margin.top]);
+
+  const gMain = svg.append("g");
+  const gTrueContours = gMain.append("g");
+  const gSurContours = gMain.append("g");
+  const gPath = gMain.append("g");
+  const gSamples = gMain.append("g");
+  const gHandles = gMain.append("g");
+  const gAxes = gMain.append("g");
+
+  gAxes.append("g").attr("class","axis").attr("transform",`translate(0,${margin.top + plotH})`).call(d3.axisBottom(x).ticks(8));
+  gAxes.append("g").attr("class","axis").attr("transform",`translate(${margin.left},0)`).call(d3.axisLeft(y).ticks(8));
+  gAxes.append("text").attr("x", margin.left + plotW/2).attr("y", H - 8).attr("text-anchor","middle").attr("fill","#6b7280").attr("font-size",13).text("θ₁");
+  gAxes.append("text").attr("transform",`translate(18,${margin.top + plotH/2}) rotate(-90)`).attr("text-anchor","middle").attr("fill","#6b7280").attr("font-size",13).text("θ₂");
+
+  const varianceSlider = document.getElementById("varianceSlider");
+  const varianceValue = document.getElementById("varianceValue");
+  const gpSlider = document.getElementById("gpSamples");
+  const gpSamplesValue = document.getElementById("gpSamplesValue");
+  const eventsSlider = document.getElementById("events");
+  const eventsValue = document.getElementById("eventsValue");
+  const showSurrogateCheckbox = document.getElementById("showSurrogate");
+  const showSamplesCheckbox = document.getElementById("showSamples");
+  const runBtn = document.getElementById("runBtn");
+  const resetBtn = document.getElementById("resetBtn");
+
+  const statStatus = document.getElementById("stat-status");
+  const statAccepted = document.getElementById("stat-accepted");
+  const statViolations = document.getElementById("stat-violations");
+
+  const means0 = [
+    {id:0, x:-1.6, y: 1.25, w:1.00},
+    {id:1, x: 1.9, y: 1.10, w:0.95},
+    {id:2, x:-1.3, y:-1.8, w:0.85},
+    {id:3, x: 2.2, y:-1.45, w:0.75}
+  ];
+  let means = means0.map(d => ({...d}));
+  let lastResult = null;
+  const gridNX = 72, gridNY = 62;
+  const handleDragPadding = 0.2;
+
+  function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+  function sharedVariance(){ return +varianceSlider.value; }
+  function mixWeights(){
+    const w = means.map(d => d.w);
+    const s = w.reduce((a,b)=>a+b, 0);
+    return w.map(v => v/s);
+  }
+  function logSumExp(arr){
+    const m = d3.max(arr);
+    let s = 0;
+    for(const v of arr) s += Math.exp(v - m);
+    return m + Math.log(s);
+  }
+
+  function logDensity(theta){
+    const s2 = sharedVariance();
+    const weights = mixWeights();
+    const logs = means.map((m, i) => {
+      const dx = theta[0] - m.x;
+      const dy = theta[1] - m.y;
+      return Math.log(weights[i]) - 0.5*(dx*dx + dy*dy)/s2;
+    });
+    const x1 = theta[0], x2 = theta[1];
+    const background = -0.012*(0.45*x1*x1 + 0.9*x2*x2) + 0.018*Math.sin(0.55*x1 - 0.25*x2);
+    return logSumExp(logs) + background;
+  }
+
+  function gradLogDensity(theta){
+    const s2 = sharedVariance();
+    const weights = mixWeights();
+    const logs = means.map((m, i) => {
+      const dx = theta[0] - m.x;
+      const dy = theta[1] - m.y;
+      return Math.log(weights[i]) - 0.5*(dx*dx + dy*dy)/s2;
+    });
+    const lse = logSumExp(logs);
+    let gx = 0, gy = 0;
+    for(let i=0;i<means.length;i++){
+      const alpha = Math.exp(logs[i] - lse);
+      gx += alpha * (-(theta[0] - means[i].x)/s2);
+      gy += alpha * (-(theta[1] - means[i].y)/s2);
+    }
+    gx += -0.0108*theta[0] + 0.018*Math.cos(0.55*theta[0] - 0.25*theta[1]) * 0.55;
+    gy += -0.0216*theta[1] + 0.018*Math.cos(0.55*theta[0] - 0.25*theta[1]) * (-0.25);
+    return [gx, gy];
+  }
+
+  function solveLinearSystem(A, b){
+    const n = A.length;
+    const M = A.map((row, i) => row.slice().concat([b[i]]));
+    for(let k=0;k<n;k++){
+      let pivot = k, best = Math.abs(M[k][k]);
+      for(let i=k+1;i<n;i++){ const v = Math.abs(M[i][k]); if(v > best){ best = v; pivot = i; } }
+      if(pivot !== k){ const tmp = M[k]; M[k] = M[pivot]; M[pivot] = tmp; }
+      const diag = Math.abs(M[k][k]) < 1e-12 ? (M[k][k] >= 0 ? 1e-12 : -1e-12) : M[k][k];
+      for(let i=k+1;i<n;i++){
+        const f = M[i][k] / diag;
+        for(let j=k;j<=n;j++) M[i][j] -= f * M[k][j];
+      }
+    }
+    const xsol = Array(n).fill(0);
+    for(let i=n-1;i>=0;i--){
+      let s = M[i][n];
+      for(let j=i+1;j<n;j++) s -= M[i][j] * xsol[j];
+      const diag = Math.abs(M[i][i]) < 1e-12 ? (M[i][i] >= 0 ? 1e-12 : -1e-12) : M[i][i];
+      xsol[i] = s / diag;
+    }
+    return xsol;
+  }
+
+  function buildGP(trainX, trainY){
+    const n = trainX.length;
+    const length = 1.55, sigmaF = 1.0, noise = 1e-6;
+    function kernel(a,b){
+      const dx = a[0]-b[0], dy = a[1]-b[1];
+      return sigmaF*sigmaF*Math.exp(-0.5*(dx*dx + dy*dy)/(length*length));
+    }
+    const mean = trainY.reduce((s,v)=>s+v, 0) / n;
+    const centered = trainY.map(v => v - mean);
+    const K = Array.from({length:n}, (_,i) =>
+      Array.from({length:n}, (_,j) => kernel(trainX[i], trainX[j]) + (i===j ? noise : 0))
+    );
+    const alpha = solveLinearSystem(K, centered);
+    function predict(theta){
+      let m = mean, gx = 0, gy = 0;
+      for(let i=0;i<n;i++){
+        const dx = theta[0] - trainX[i][0];
+        const dy = theta[1] - trainX[i][1];
+        const k = sigmaF*sigmaF*Math.exp(-0.5*(dx*dx + dy*dy)/(length*length));
+        m += alpha[i] * k;
+        const fac = -k/(length*length);
+        gx += alpha[i] * fac * dx;
+        gy += alpha[i] * fac * dy;
+      }
+      return {mean:m, grad:[gx, gy]};
+    }
+    return {predict, trainX, trainY};
+  }
+
+  function latinHyperCube(n, xlim, ylim){
+    const xs = d3.shuffle(d3.range(n)).map((_,i) => xlim[0] + (i + Math.random())/n * (xlim[1]-xlim[0]));
+    const ys = d3.shuffle(d3.range(n)).map((_,i) => ylim[0] + (i + Math.random())/n * (ylim[1]-ylim[0]));
+    return d3.range(n).map(i => [xs[i], ys[i]]);
+  }
+
+  function makeGridValue(fn){
+    const values = new Float32Array(gridNX * gridNY);
+    let idx = 0;
+    for(let j=0;j<gridNY;j++){
+      const yy = yDomain[0] + (j/(gridNY-1))*(yDomain[1]-yDomain[0]);
+      for(let i=0;i<gridNX;i++){
+        const xx = xDomain[0] + (i/(gridNX-1))*(xDomain[1]-xDomain[0]);
+        values[idx++] = fn([xx, yy]);
+      }
+    }
+    return values;
+  }
+
+  function contourPathData(contours){
+    const sx = plotW/(gridNX-1), sy = plotH/(gridNY-1);
+    const geoPath = d3.geoPath(d3.geoIdentity().scale(1).translate([margin.left, margin.top]));
+    const transformed = contours.map(c => ({
+      type:"MultiPolygon",
+      value:c.value,
+      coordinates:c.coordinates.map(poly => poly.map(ring => ring.map(([gx, gy]) => [gx*sx, plotH - gy*sy])))
+    }));
+    return transformed.map(c => ({value:c.value, d:geoPath(c)}));
+  }
+
+  function drawGroundTruth(){
+    const values = makeGridValue(logDensity);
+    const vmin = d3.min(values), vmax = d3.max(values);
+    const levels = d3.range(vmin + 0.33*(vmax-vmin), vmax - 0.10, (vmax-vmin)/6.2);
+    const paths = contourPathData(d3.contours().size([gridNX, gridNY]).thresholds(levels)(values));
+    gTrueContours.selectAll("path").data(paths, d => d.value).join(
+      enter => enter.append("path").attr("d", d => d.d).attr("fill","none").attr("stroke","#3b82f6").attr("stroke-width",1.8).attr("stroke-opacity",0.85),
+      update => update.attr("d", d => d.d),
+      exit => exit.remove()
+    );
+  }
+
+  function drawSurrogate(gp){
+    if(!gp){ gSurContours.selectAll("*").remove(); return; }
+    const values = makeGridValue(theta => gp.predict(theta).mean);
+    const vmin = d3.min(values), vmax = d3.max(values);
+    const levels = d3.range(vmin + 0.36*(vmax-vmin), vmax - 0.12, (vmax-vmin)/5.8);
+    const paths = contourPathData(d3.contours().size([gridNX, gridNY]).thresholds(levels)(values));
+    gSurContours.selectAll("path").data(paths, d => d.value).join(
+      enter => enter.append("path").attr("d", d => d.d).attr("fill","none").attr("stroke","#ef4444").attr("stroke-width",1.2).attr("stroke-dasharray","6 4").attr("stroke-opacity",0.78),
+      update => update.attr("d", d => d.d),
+      exit => exit.remove()
+    );
+  }
+
+  function drawSamples(trainX){
+    const sel = gSamples.selectAll("circle").data(trainX || []);
+    sel.join(
+      enter => enter.append("circle").attr("cx", d => x(d[0])).attr("cy", d => y(d[1])).attr("r",3.5).attr("fill","#16a34a").attr("opacity",0.82),
+      update => update.attr("cx", d => x(d[0])).attr("cy", d => y(d[1])),
+      exit => exit.remove()
+    );
+  }
+
+  function drawPath(points){
+    if(!points || points.length < 2){ gPath.selectAll("*").remove(); return; }
+    const line = d3.line().x(d => x(d[0])).y(d => y(d[1]));
+    gPath.selectAll("path").data([points]).join("path")
+      .attr("d", line).attr("fill","none").attr("stroke","#111827").attr("stroke-width",1.95)
+      .attr("stroke-linejoin","round").attr("stroke-linecap","round").attr("opacity",0.93);
+    gPath.selectAll("circle").data([points[0], points[points.length-1]]).join("circle")
+      .attr("cx", d => x(d[0])).attr("cy", d => y(d[1])).attr("r", (_, i) => i === 0 ? 4.3 : 5.0)
+      .attr("fill", (_, i) => i === 0 ? "#6b7280" : "#111827");
+  }
+
+  function drawHandles(){
+    const drag = d3.drag()
+      .subject((event, d) => ({x: x(d.x), y: y(d.y)}))
+      .on("drag", (event, d) => {
+        d.x = clamp(x.invert(event.x), xDomain[0] + handleDragPadding, xDomain[1] - handleDragPadding);
+        d.y = clamp(y.invert(event.y), yDomain[0] + handleDragPadding, yDomain[1] - handleDragPadding);
+        renderTargetOnly();
+      });
+
+    const groups = gHandles.selectAll("g.handle").data(means, d => d.id).join(
+      enter => {
+        const g = enter.append("g").attr("class", "handle");
+        g.append("circle").attr("r", 7).attr("fill","#f59e0b").attr("stroke","#ffffff").attr("stroke-width",2.2);
+        g.append("text").attr("y",-12).attr("text-anchor","middle").attr("font-size",11).attr("fill","#92400e").text((d,i) => `μ${i+1}`);
+        return g.call(drag);
+      },
+      update => update.call(drag),
+      exit => exit.remove()
+    );
+    groups.attr("transform", d => `translate(${x(d.x)},${y(d.y)})`);
+  }
+
+  function renderTargetOnly(){
+    drawGroundTruth();
+    drawHandles();
+    drawSurrogate(null);
+    drawSamples([]);
+    drawPath([]);
+    lastResult = null;
+    statStatus.textContent = "ready";
+    statAccepted.textContent = "0";
+    statViolations.textContent = "0";
+  }
+
+  function calibrateOffset(gp, trainX){
+    const diffs = [0, 0];
+    for(const pt of trainX){
+      const gt = gradLogDensity(pt);
+      const gs = gp.predict(pt).grad;
+      diffs[0] = Math.max(diffs[0], Math.abs(gt[0] - gs[0]));
+      diffs[1] = Math.max(diffs[1], Math.abs(gt[1] - gs[1]));
+    }
+    return [0.16 + 1.20*diffs[0], 0.16 + 1.20*diffs[1]];
+  }
+
+  function surrogateRate(theta, v, gp, offset, gamma){
+    const g = gp.predict(theta).grad;
+    return [Math.max(-g[0]*v[0] + offset[0], 0) + gamma, Math.max(-g[1]*v[1] + offset[1], 0) + gamma];
+  }
+  function trueRate(theta, v, gamma){
+    const g = gradLogDensity(theta);
+    return [Math.max(-g[0]*v[0], 0) + gamma, Math.max(-g[1]*v[1], 0) + gamma];
+  }
+
+  function proposeEvent(theta, v, gp, offset, gamma){
+    const dt = 0.03;
+    const s = [-Math.log(Math.random()), -Math.log(Math.random())];
+    let taus = [0, 0], integ = [0, 0], r0 = surrogateRate(theta, v, gp, offset, gamma), r1 = [0, 0], safety = 0;
+    while((integ[0] < s[0] || integ[1] < s[1]) && safety < 14000){
+      safety++;
+      const probe = [theta[0] + (taus[0] + dt)*v[0], theta[1] + (taus[0] + dt)*v[1]];
+      r1 = surrogateRate(probe, v, gp, offset, gamma);
+      for(let i=0;i<2;i++){
+        if(integ[i] < s[i]){ integ[i] += 0.5*(r0[i] + r1[i])*dt; taus[i] += dt; }
+      }
+      r0 = r1.slice();
+    }
+    const corrected = [taus[0], taus[1]];
+    for(let i=0;i<2;i++){
+      const ri = Math.max(r1[i], 1e-8);
+      corrected[i] = taus[i] - Math.max(integ[i] - s[i], 0)/ri;
+    }
+    const j = corrected[0] < corrected[1] ? 0 : 1;
+    return {tau: corrected[j], dim: j};
+  }
+
+  function runSampler(nInit, nEvents){
+    const trainX = latinHyperCube(nInit, [-4.2, 4.2], [-3.8, 3.8]);
+    const trainY = trainX.map(logDensity);
+    const gp = buildGP(trainX, trainY);
+    let offset = calibrateOffset(gp, trainX);
+
+    let theta = [-5.2, 4.7];
+    let v = [1, -1];
+    const gamma = 0.02;
+    const path = [theta.slice()];
+    let accepted = 0, rejected = 0, violations = 0, evals = trainX.length;
+
+    for(let k=0;k<nEvents;k++){
+      const cand = proposeEvent(theta, v, gp, offset, gamma);
+      theta = [theta[0] + cand.tau*v[0], theta[1] + cand.tau*v[1]];
+      const lamTrue = trueRate(theta, v, gamma);
+      const lamProp = surrogateRate(theta, v, gp, offset, gamma);
+      evals += 1;
+
+      if(lamTrue[cand.dim] > lamProp[cand.dim] + 1e-10){
+        const gap = lamTrue[cand.dim] - lamProp[cand.dim];
+        offset[cand.dim] += 1.15*gap + 0.02;
+        violations += 1;
+        rejected += 1;
+      } else {
+        const a = lamTrue[cand.dim] / Math.max(lamProp[cand.dim], 1e-12);
+        if(Math.random() < a){ v[cand.dim] *= -1; accepted += 1; }
+        else { rejected += 1; }
+      }
+      offset[0] = Math.max(0.05, 0.9987*offset[0]);
+      offset[1] = Math.max(0.05, 0.9987*offset[1]);
+      path.push(theta.slice());
+    }
+    return {trainX, gp, path, accepted, rejected, violations, offset, evals};
+  }
+
+  function setBusy(busy){
+    runBtn.disabled = busy; gpSlider.disabled = busy; eventsSlider.disabled = busy; varianceSlider.disabled = busy;
+    showSurrogateCheckbox.disabled = busy; showSamplesCheckbox.disabled = busy; resetBtn.disabled = busy;
+  }
+
+  async function animateResult(result){
+    drawSamples(showSamplesCheckbox.checked ? result.trainX : []);
+    drawSurrogate(showSurrogateCheckbox.checked ? result.gp : null);
+    const total = result.path.length;
+    const stride = total > 1800 ? 8 : total > 700 ? 4 : 2;
+    const pause = total > 1800 ? 2 : 6;
+    for(let i=2;i<=total;i+=stride){
+      drawPath(result.path.slice(0, i));
+      await new Promise(r => setTimeout(r, pause));
+    }
+    drawPath(result.path);
+  }
+
+  async function runInference(){
+    setBusy(true);
+    statStatus.textContent = "running…";
+    drawPath([]); drawSamples([]); drawSurrogate(null);
+    await new Promise(r => setTimeout(r, 35));
+    const result = runSampler(+gpSlider.value, +eventsSlider.value);
+    lastResult = result;
+    await animateResult(result);
+    statStatus.textContent = "done";
+    statAccepted.textContent = String(result.accepted);
+    statViolations.textContent = String(result.violations);
+    setBusy(false);
+  }
+
+  varianceSlider.addEventListener("input", () => { varianceValue.textContent = (+varianceSlider.value).toFixed(2); renderTargetOnly(); });
+  gpSlider.addEventListener("input", () => gpSamplesValue.textContent = gpSlider.value);
+  eventsSlider.addEventListener("input", () => eventsValue.textContent = eventsSlider.value);
+  showSurrogateCheckbox.addEventListener("change", () => { if(lastResult) drawSurrogate(showSurrogateCheckbox.checked ? lastResult.gp : null); });
+  showSamplesCheckbox.addEventListener("change", () => { if(lastResult) drawSamples(showSamplesCheckbox.checked ? lastResult.trainX : []); });
+  runBtn.addEventListener("click", runInference);
+  resetBtn.addEventListener("click", () => {
+    means = means0.map(d => ({...d}));
+    varianceSlider.value = "0.55";
+    varianceValue.textContent = "0.55";
+    showSurrogateCheckbox.checked = false;
+    showSamplesCheckbox.checked = false;
+    renderTargetOnly();
+  });
+
+  drawGroundTruth();
+  drawHandles();
+})();
+</script>
+</body>
+</html>
