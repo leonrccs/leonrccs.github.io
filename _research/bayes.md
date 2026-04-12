@@ -2,22 +2,20 @@
 layout: page
 title: pdmp sampling
 description: 
-img: assets/img/project_covers/bayes.png
+img: assets/img/project_covers/pdmp_sampling.png
 importance: 1
 category: tools
 related_publications: true
 ---
 
-I work on developing tools for **making Bayesian inference practical for computational mechanics**. These problems arise on a number of real-life applications that are often too cumbersome or error prone:
+I work on developing tools for **making Bayesian inference practical for computational mechanics**.
+These problems arise on a number of real-life applications that are often too cumbersome or error-prone:
 
 - Inferring model parameters (e.g material properties) from noisy measurements coming from experiments
 - Monitoring existing structures and detecting hidden defects which might cause failure
-- Estimating the error of approximate numerical techniques
+- Upscaling mechanical properties from a small number of high-fidelity simulations
 
-For all of the above, deterministic approaches are often ill-posed and uninformed, while conventional Bayesian inference is extremely slow (e.g forward Monte Carlo, MCMC). I develop tools for obtaining posterior distributions that are both:
-
-- (i) computationally efficient when the forward model is a PDE solved approximately on a complex domain
-- (ii) statistically consistent about the sources of epistemic uncertainty (prior beliefs versus observation noise versus numerical error)
+For all of the above, deterministic approaches are often ill-posed and uninformed, while conventional Bayesian inference is extremely slow (e.g forward Monte Carlo, MCMC).
 
 ## Piecewise Deterministic Markov Processes (PDMPs)
 
@@ -38,7 +36,10 @@ When the likelihood function requires solving a PDE, standard MCMC can become im
     Inferring two PDE parameters with conventional Random Walk MCMC (left), the Zig-zag sampler (middle), and the Bouncy Particle sampler (right) 
 </div>
 
-I collaborate with [Joris Bierkens](https://scholar.google.nl/citations?hl=nl&user=JlAi6VAAAAAJ) and [Hanne Kekkonen](https://scholar.google.nl/citations?user=wxsxtq4AAAAJ&hl=nl), the statistical learning experts who develop these samplers, in applying PDMPs for real-world problems. In a recent publication {% cite riccius2026piecewisedeterministicmarkovprocesses %} we develop an approach for using PDMPs to infer PDE parameters (e.g material properties with a FEM model and experimental measurements). Since FEM is much more messy than the usual well-behaved distributions Joris and Hanne use to develop the samplers, we came up with a way to still make it work by combining Poisson Thinning with a GP-based surrogate model that approximates the gradient of the log posterior being learned. Our approach extends the applicability of PDMPs to a much wider range of problems, and for PDE parameters in computational mechanics we actually find our PDMPs outperform state-of-the-art NUTS (*No U-Turn Sampler*) implementations:
+I collaborate with [Joris Bierkens](https://scholar.google.nl/citations?hl=nl&user=JlAi6VAAAAAJ) and [Hanne Kekkonen](https://scholar.google.nl/citations?user=wxsxtq4AAAAJ&hl=nl), the statistical learning experts who develop these samplers, in applying PDMPs for real-world problems.
+In a recent publication {% cite riccius2026piecewisedeterministicmarkovprocesses %} we develop an approach for using PDMPs to infer PDE parameters (e.g. material properties with a FEM model and experimental measurements).
+Since FEM is much more messy than the usual well-behaved distributions Joris and Hanne use to develop the samplers, we came up with a way to still make it work by combining Poisson Thinning with a GP-based surrogate model that approximates the gradient of the log-target.
+Our approach extends the applicability of PDMPs to a much wider range of problems, and for PDE parameters in computational mechanics we actually find our PDMPs outperform state-of-the-art NUTS (*No U-Turn Sampler*) implementations:
 
 <div class="row">
     <div class="col-12 col-md-8 col-lg-6 mx-auto mt-3 mt-md-0">

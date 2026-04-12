@@ -161,6 +161,8 @@ collections:
     output: true
   projects:
     output: true
+  research:
+    output: true
   teachings:
     output: true
 
