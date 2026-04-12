@@ -429,7 +429,12 @@ ninja.data = [{
             },},{id: "news-a-simple-inline-announcement-with-markdown-emoji-sparkles-smile",
           title: 'A simple inline announcement with Markdown emoji! :sparkles: :smile:',
           description: "",
-          section: "News",},{id: "research-pdmp-sampling",
+          section: "News",},{id: "research-mcmc-guided-active-learning",
+          title: 'mcmc guided active learning',
+          description: "",
+          section: "Research",handler: () => {
+              window.location.href = "/research/active_learning.html";
+            },},{id: "research-pdmp-sampling",
           title: 'pdmp sampling',
           description: "",
           section: "Research",handler: () => {
