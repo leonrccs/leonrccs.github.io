@@ -1,9 +1,26 @@
-<div class="w-100" style="max-width: 100%;">
+<div class="pdmp-embed-wrap" style="position:relative; width:100%; max-width:100%;">
   <iframe
     src="{{ '/assets/html/pdmp.html?embed=1' | relative_url }}"
     title="PDMP sandbox"
-    style="width: 100%; min-width: 100%; height: clamp(520px, 58vw, 700px); border: none; display: block;"
+    style="width:100%; height:clamp(520px,58vw,700px); border:none; display:block;"
     loading="lazy"
-  >
-  </iframe>
+  ></iframe>
+  <div class="pdmp-touch-overlay" aria-hidden="true"
+    style="display:none; position:absolute; inset:0; background:rgba(0,0,0,0.18);
+           color:#fff; font-size:15px; font-weight:600; letter-spacing:0.01em;
+           align-items:center; justify-content:center; border-radius:inherit;
+           cursor:pointer; user-select:none;">
+    Tap to interact
+  </div>
 </div>
+<script>
+(function(){
+  if (!window.matchMedia('(hover: none) and (pointer: coarse)').matches) return;
+  var wrap = document.currentScript.previousElementSibling;
+  var overlay = wrap.querySelector('.pdmp-touch-overlay');
+  overlay.style.display = 'flex';
+  overlay.addEventListener('click', function() {
+    overlay.style.display = 'none';
+  }, { once: true });
+})();
+</script>
