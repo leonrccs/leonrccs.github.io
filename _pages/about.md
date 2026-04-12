@@ -10,7 +10,7 @@ profile:
   image_circular: false # crops the image to make it circular
   more_info: >
     <p>computational mechanics group</p>
-    <p>faculty for civil engineering and geosciences</p>
+    <p>faculty of civil engineering and geosciences</p>
     <p>delft university of technology</p>
 
 selected_papers: true # includes a list of papers marked as "selected={true}"
