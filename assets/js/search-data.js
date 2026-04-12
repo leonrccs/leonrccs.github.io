@@ -439,6 +439,11 @@ ninja.data = [{
           description: "",
           section: "Research",handler: () => {
               window.location.href = "/research/bayes.html";
+            },},{id: "research-physics-informed-turbulence-closure",
+          title: 'physics-informed turbulence closure',
+          description: "",
+          section: "Research",handler: () => {
+              window.location.href = "/research/pi_tbnn.html";
             },},{id: "teachings-data-science-fundamentals",
           title: 'Data Science Fundamentals',
           description: "This course covers the foundational aspects of data science, including data collection, cleaning, analysis, and visualization. Students will learn practical skills for working with real-world datasets.",
