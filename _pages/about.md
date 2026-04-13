@@ -2,7 +2,7 @@
 layout: about
 title: about
 permalink: /
-subtitle: PhD researcher at <a href='#'>TU Delft</a>.
+subtitle: PhD researcher at <a href='#'>SLIMM Lab</a>, <a href='#'>TU Delft</a>.
 
 profile:
   align: right
