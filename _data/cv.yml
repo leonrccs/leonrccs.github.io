@@ -70,10 +70,13 @@ cv:
           - "Endurance test coordination in the engine design department"
 
     Awards:
+      - title: Travel Award
+        date: 2025
+        awarder: Society for Industrial and Applied Mathematics (SIAM)
+        
       - title: Best Poster Award
         date: 2024
         awarder: 27th Engineering Mechanics Symposium (114 submissions)
-        summary: "Papendal, NL"
 
     Skills:
       - name: Programming
