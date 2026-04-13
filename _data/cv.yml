@@ -1,7 +1,7 @@
 cv:
   name: Leon Riccius
   label: PhD Candidate
-  email: leon.riccius@online.de
+  email: l.f.riccius@tudelft.nl
   location: Delft, NL
   image: ""
   summary: PhD candidate at Delft University of Technology working on efficient Bayesian inference of parametric partial differential equations.
@@ -23,7 +23,7 @@ cv:
         end_date: present
         highlights:
           - "Thesis: Efficient Bayesian Inference of Parametric Partial Differential Equations"
-          - "Supervisors: Dr. Iuri Rocha & Dr. Frans P. van der Meer"
+          - "Supervisors: Iuri Rocha & Frans P. van der Meer"
 
       - institution: Technical University Munich
         location: Munich, GER
