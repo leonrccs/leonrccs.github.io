@@ -397,16 +397,14 @@ ninja.data = [{
           description: "",
           section: "Books",handler: () => {
               window.location.href = "/books/the_godfather.html";
-            },},{id: "news-a-simple-inline-announcement",
-          title: 'A simple inline announcement.',
+            },},{id: "news-i-won-the-best-poster-award-at-the-27th-engineering-mechanics-symposium",
+          title: 'I won the best poster award at the 27th Engineering Mechanics Symposium!',
           description: "",
-          section: "News",},{id: "news-a-long-announcement-with-details",
-          title: 'A long announcement with details',
+          section: "News",},{id: "news-new-paper-out-in-ejmsol-on-mcmc-guided-active-learning",
+          title: 'New paper out in EJMSOL on MCMC-guided active learning.',
           description: "",
-          section: "News",handler: () => {
-              window.location.href = "/news/announcement_2.html";
-            },},{id: "news-a-simple-inline-announcement-with-markdown-emoji-sparkles-smile",
-          title: 'A simple inline announcement with Markdown emoji! :sparkles: :smile:',
+          section: "News",},{id: "news-new-preprint-available-on-arxiv-on-pdmp-sampling-for-bayesian-inference-of-pde-coefficients",
+          title: 'New preprint available on arXiv on PDMP sampling for Bayesian inference of PDE...',
           description: "",
           section: "News",},{id: "research-mcmc-guided-active-learning",
           title: 'mcmc guided active learning',
