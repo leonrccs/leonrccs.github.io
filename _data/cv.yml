@@ -50,27 +50,6 @@ cv:
           - "Supervisor: Prof. M.W. Gee"
           - "Semester abroad: Ecole Polytechnique de Montréal, Montréal, CA (01/2016 – 05/2016)"
 
-    Teaching:
-      - company: TU Delft, Faculty of Civil Engineering and Geosciences
-        position: "Teaching Assistant, Interactive Textbook Designer, Project Supervisor"
-        location: Delft, NL
-        start_date: 2021-07
-        end_date: present
-        highlights:
-          - "Modeling, Uncertainty, and Data Analysis for Engineers"
-          - "Data Science and Artificial Intelligence for Engineers"
-          - "Statistical Learning for Engineers"
-          - "Supervision: Daan Smolders, Master Thesis, in cooperation with Airbus (2024) — Surrogate modelling for uncertainty propagation by targeting regions of high variance and probability"
-
-      - company: TU Munich, Department of Mathematics
-        position: Teaching Assistant
-        location: Munich, GER
-        start_date: 2016-08
-        end_date: 2021-10
-        highlights:
-          - "Various analysis and algebra tutoring classes for Mechanical and Electrical Engineering"
-          - "Lecture exercises with up to 500 participants"
-
     Experience:
       - company: "TU Munich, Chair of Metal Forming and Casting"
         position: Academic Assistant (50%)
