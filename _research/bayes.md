@@ -52,7 +52,7 @@ Our approach extends the applicability of PDMPs to a much wider range of problem
 
 You can play with our approach by using the following interactive plot. You can move the means of the Gaussian mixture that makes up the ground truth posterior to generate more challenging multi-modal problems:
 
-<div class="card p-3 mb-4">
+<div id="pdmp-sandbox" class="card p-3 mb-4">
     <h3 class="mb-2">A tiny PDMP sandbox</h3>
     <p class="text-muted mb-3">
         Try out our surrogate-enhanced Zig-zag sampler implementation in a non-Gaussian problem: 
