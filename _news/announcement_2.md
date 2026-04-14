@@ -5,4 +5,4 @@ inline: true
 related_posts: false
 ---
 
-New paper out in EJMSOL on [Integration of active learning and MCMC sampling for efficient Bayesian calibration of mechanical properties](https://doi.org/10.1016/j.euromechsol.2026.106015).
+New paper out in EJMSOL: [Integration of active learning and MCMC sampling for efficient Bayesian calibration of mechanical properties](https://doi.org/10.1016/j.euromechsol.2026.106015).

@@ -5,4 +5,4 @@ inline: true
 related_posts: false
 ---
 
-New preprint available on arXiv on [Piecewise Deterministic Markov Processes for Bayesian Inference of PDE Coefficients](https://arxiv.org/abs/2602.05559).
+New preprint available on arXiv: [Piecewise Deterministic Markov Processes for Bayesian Inference of PDE Coefficients](https://arxiv.org/abs/2602.05559).
