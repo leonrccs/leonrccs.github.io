@@ -2,7 +2,7 @@
 layout: page
 title: pdmp sampling
 description: 
-img: assets/img/project_covers/pdmp_sampling.png
+img: assets/img/project_covers/zz.gif
 importance: 1
 category: tools
 related_publications: true

@@ -4,6 +4,12 @@
 
 @use "variables" as v;
 
+.card-img-top {
+  max-height: 250px;
+  width: 100%;
+  object-fit: contain;
+}
+
 body {
   padding-bottom: 70px;
   color: var(--global-text-color);
