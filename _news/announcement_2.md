@@ -5,4 +5,4 @@ inline: true
 related_posts: false
 ---
 
-New paper out in [EJMSOL](https://doi.org/10.1016/j.euromechsol.2026.106015) on MCMC-guided active learning.
+New paper out in EJMSOL on [Integration of active learning and MCMC sampling for efficient Bayesian calibration of mechanical properties](https://doi.org/10.1016/j.euromechsol.2026.106015).

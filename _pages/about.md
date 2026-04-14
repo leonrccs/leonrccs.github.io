@@ -2,7 +2,7 @@
 layout: about
 title: about
 permalink: /
-subtitle: PhD researcher at <a href='#'>SLIMM Lab</a>, <a href='#'>TU Delft</a>.
+subtitle: PhD researcher at <a href='https://www.tudelft.nl/ai/slimmlab'>SLIMM Lab</a>, <a href='https://www.tudelft.nl/en/'>TU Delft</a>.
 
 profile:
   align: right
@@ -29,10 +29,13 @@ I am building scalable Bayesian inference pipelines for physics-based models.
 I develop methodology at the intersection of advanced Monte Carlo methods (PDMP samplers), Gaussian processes, and computational mechanics to solve inverse problems in material model calibration.
 My wider interests span generative modeling, simulation-based inference, and the fusion of machine learning with numerical methods for materials discovery and design.
 
-## Research
+[//]: # (## Research)
 
-**[PDMP sampling](/research/bayes/)** — Standard MCMC wastes most evaluations on random-walk exploration. Piecewise Deterministic Markov Processes travel along deterministic trajectories and switch direction at random times, sampling whole lines in parameter space rather than single points. Applied to PDE parameter inference, our surrogate-enhanced Zig-Zag sampler and Bouncy Particle sampler consistently outperform the NUTS in terms of accuracy per cost. Try it yourself in the [interactive PDMP sandbox](/research/bayes/#pdmp-sandbox).
+[//]: # ()
+[//]: # (**[PDMP sampling]&#40;/research/bayes/&#41;** — Standard MCMC wastes most evaluations on random-walk exploration. Piecewise Deterministic Markov Processes travel along deterministic trajectories and switch direction at random times, sampling whole lines in parameter space rather than single points. Applied to PDE parameter inference, our surrogate-enhanced Zig-Zag sampler and Bouncy Particle sampler consistently outperform the NUTS in terms of accuracy per cost. Try it yourself in the [interactive PDMP sandbox]&#40;/research/bayes/#pdmp-sandbox&#41;.)
 
-**[MCMC-guided active learning](/research/active_learning/)** — Surrogate models make Bayesian inference tractable, but only if training data lands where the posterior lives. We couple GP surrogates directly to the MCMC chain: new FEM evaluations are triggered only where the surrogate is uncertain, focusing compute precisely on the posterior support. The result: accurate inference with a fraction of the forward model evaluations.
+[//]: # ()
+[//]: # (**[MCMC-guided active learning]&#40;/research/active_learning/&#41;** — Surrogate models make Bayesian inference tractable, but only if training data lands where the posterior lives. We couple GP surrogates directly to the MCMC chain: new FEM evaluations are triggered only where the surrogate is uncertain, focusing compute precisely on the posterior support. The result: accurate inference with a fraction of the forward model evaluations.)
 
-**[Physics-informed turbulence closure](/research/pi_tbnn/)** — RANS closures break down for flows with curvature and separation. We extend the Tensor Basis Neural Network with a richer feature set and embed realizability constraints as a training-loss penalty, achieving a 70% reduction in anisotropy tensor error over the k-ω baseline.
+[//]: # ()
+[//]: # (**[Physics-informed turbulence closure]&#40;/research/pi_tbnn/&#41;** — RANS closures break down for flows with curvature and separation. We extend the Tensor Basis Neural Network with a richer feature set and embed realizability constraints as a training-loss penalty, achieving a 70% reduction in anisotropy tensor error over the k-ω baseline.)
