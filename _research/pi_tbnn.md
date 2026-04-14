@@ -45,6 +45,15 @@ The barycentric maps make this failure visible at a glance.
 The Tensor Basis Neural Network (TBNN) of Ling et al. learns to predict the anisotropy tensor as a linear combination of ten integrity basis tensors, guaranteeing frame invariance by construction.
 In {% cite riccius2023pitbnn %} we extend this framework in two ways:
 
+<div class="row justify-content-center">
+    <div class="col-12 col-md-8 mx-auto mt-3 mt-md-0">
+        {% include figure.liquid loading="eager" path="assets/research/pi_tbnn/tbnn.png" title="TBNN architecture" class="img-fluid rounded z-depth-1" %}
+    </div>
+</div>
+<div class="caption">
+    The Tensor Basis Neural Network architecture. Invariant features are fed into a fully connected network, whose scalar outputs are combined with ten integrity basis tensors to produce the anisotropy tensor prediction.
+</div>
+
 **Extended feature set.** We show analytically that for 2D-homogeneous flows, two of the five standard TBNN invariants vanish identically — they carry no information. We augment the input with gradients of the turbulent kinetic energy and pressure, giving 17 features in total.
 
 **Realizability constraints as inductive bias.** Physical turbulence states must lie inside the barycentric triangle. Rather than post-processing predictions onto the boundary (as in Ling et al.), we incorporate the six realizability inequalities directly as a penalty term in the training loss. Violating predictions are pushed back inside the physical domain during training.
