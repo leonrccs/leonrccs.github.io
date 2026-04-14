@@ -10,6 +10,15 @@
   object-fit: contain;
 }
 
+.img-capped {
+  max-height: 300px;
+  max-width: 100%;
+  width: auto;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+}
+
 body {
   padding-bottom: 70px;
   color: var(--global-text-color);

@@ -21,15 +21,15 @@ For all of the above, deterministic approaches are often ill-posed and uninforme
 
 When the likelihood function requires solving a PDE, standard MCMC can become impractical: most steps are wasted due to random-walk behavior, and each likelihood/gradient evaluation is costly. **PDMPs** provide an appealing alternative because they can explore posteriors with fewer correlated samples per likelihood evaluation. The key idea is to explore the inference space with *deterministic dynamics* that can however *change directions at random times*. With this we can explore whole lines in parameter space rather than single points:
 
-<div class="row">
+<div class="row justify-content-center">
     <div class="col-sm mt-3 mt-md-0">
-        {% include figure.liquid loading="eager" path="assets/research/pdmp/rwm.gif" title="Conventional MCMC" class="img-fluid rounded z-depth-1" %}
+        {% include figure.liquid loading="eager" path="assets/research/pdmp/rwm.gif" title="Conventional MCMC" class="img-capped rounded z-depth-1" %}
     </div>
     <div class="col-sm mt-3 mt-md-0">
-        {% include figure.liquid loading="eager" path="assets/research/pdmp/zz.gif" title="Zig-zag sampler" class="img-fluid rounded z-depth-1" %}
+        {% include figure.liquid loading="eager" path="assets/research/pdmp/zz.gif" title="Zig-zag sampler" class="img-capped rounded z-depth-1" %}
     </div>
     <div class="col-sm mt-3 mt-md-0">
-        {% include figure.liquid loading="eager" path="assets/research/pdmp/bps.gif" title="Bouncy Particle sampler" class="img-fluid rounded z-depth-1" %}
+        {% include figure.liquid loading="eager" path="assets/research/pdmp/bps.gif" title="Bouncy Particle sampler" class="img-capped rounded z-depth-1" %}
     </div>
 </div>
 <div class="caption">
@@ -43,7 +43,7 @@ Our approach extends the applicability of PDMPs to a much wider range of problem
 
 <div class="row">
     <div class="col-12 col-md-8 col-lg-6 mx-auto mt-3 mt-md-0">
-        {% include figure.liquid loading="eager" path="/assets/research/pdmp/ess_comparison.png" title="PDMP ESS comparison" class="img-fluid rounded z-depth-1" %}
+        {% include figure.liquid loading="eager" path="/assets/research/pdmp/ess_comparison.png" title="PDMP ESS comparison" class="img-capped rounded z-depth-1" %}
     </div>
 </div>
 <div class="caption">

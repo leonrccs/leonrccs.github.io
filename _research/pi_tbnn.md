@@ -28,11 +28,11 @@ The barycentric map, together with the RGB colormap below, provides a convenient
 A square duct flow is a canonical case where LEVMs notoriously fail: secondary corner vortices driven by turbulence anisotropy are entirely absent from LEVM predictions.
 The barycentric maps make this failure visible at a glance.
 
-<div class="row">
-    <div class="col-sm mt-3 mt-md-0">
+<div class="row justify-content-center">
+    <div class="col-sm-4 mt-3 mt-md-0">
         {% include figure.liquid loading="eager" path="assets/research/pi_tbnn/barmap_rans.png" title="RANS k-omega barycentric map" class="img-fluid rounded z-depth-1" %}
     </div>
-    <div class="col-sm mt-3 mt-md-0">
+    <div class="col-sm-4 mt-3 mt-md-0">
         {% include figure.liquid loading="eager" path="assets/research/pi_tbnn/barmap_dns.png" title="DNS barycentric map" class="img-fluid rounded z-depth-1" %}
     </div>
 </div>

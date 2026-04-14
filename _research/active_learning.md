@@ -38,7 +38,7 @@ MALA's higher sampling efficiency yields slightly fewer FEM evaluations for the 
 
 <div class="row">
     <div class="col-12 col-md-10 mx-auto mt-3 mt-md-0">
-        {% include figure.liquid loading="eager" path="assets/research/active_learning/sampler_influence.png" title="MCMC sampler influence on surrogate quality" class="img-fluid rounded z-depth-1" %}
+        {% include figure.liquid loading="eager" path="assets/research/active_learning/sampler_influence.png" title="MCMC sampler influence on surrogate quality" class="img-capped rounded z-depth-1" %}
     </div>
 </div>
 <div class="caption">
