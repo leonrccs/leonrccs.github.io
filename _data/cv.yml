@@ -51,9 +51,20 @@ cv:
           - "Semester abroad: Ecole Polytechnique de Montréal, Montréal, CA (01/2016 – 05/2016)"
 
     Experience:
+      - company: Delft University of Technology
+        position: PhD Researcher
+        location: Delft, NL
+        url: https://www.tudelft.nl/
+        start_date: 2021-07
+        end_date: present
+        highlights:
+          - "Thesis: Efficient Bayesian Inference of Parametric Partial Differential Equations"
+          - "Supervisors: Iuri Rocha & Frans P. van der Meer"
+
       - company: "TU Munich, Chair of Metal Forming and Casting"
         position: Academic Assistant (50%)
         location: Munich, GER
+        url: https://www.mec.ed.tum.de/en/utg/home/
         start_date: 2021-04
         end_date: 2021-06
         highlights:
@@ -63,6 +74,7 @@ cv:
       - company: BMW Group
         position: Student Intern (100%)
         location: Munich, GER
+        url: https://www.bmwgroup.com/
         start_date: 2015-10
         end_date: 2015-12
         highlights:
