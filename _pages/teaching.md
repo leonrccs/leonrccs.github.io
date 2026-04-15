@@ -22,3 +22,12 @@ nav_order: 5
 | Student | Topic | Year |
 |:--------|:------|:-----|
 | Daan Smolders *(in cooperation with Airbus)* | Surrogate modelling for uncertainty propagation by targeting regions of high variance and probability | 2024 |
+
+
+<div style="margin-bottom: 0.5rem;"></div>
+
+## Group projects
+
+- Comparing Bayesian machine learning techniques for predicting finite element solutions (2021)
+- Composite microstructure generation with conditional variational autoencoders (2022)
+- Bayesian optimization of microstructure topologies of porous media (2023)
