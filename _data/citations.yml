@@ -1,5 +1,5 @@
 metadata:
-  last_updated: '2026-04-17'
+  last_updated: '2026-05-04'
 papers:
   VPwF7poAAAAJ:2osOgNQ5qMEC:
     citations: 0
@@ -22,6 +22,6 @@ papers:
     title: Machine Learning Augmented Turbulence Modelling for the Reynolds Stress Closure Problem
     year: '2021'
   VPwF7poAAAAJ:u5HHmVD_uO8C:
-    citations: 7
+    citations: 8
     title: Physics-Informed Tensor Basis Neural Network for Turbulence Closure Modeling
     year: '2023'
