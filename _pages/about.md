@@ -26,7 +26,7 @@ latest_posts:
 ---
  
 I am building scalable Bayesian inference pipelines for physics-based models.
-I develop methodology at the intersection of advanced Monte Carlo methods (PDMP samplers), Gaussian processes, and computational mechanics to solve inverse problems in material model calibration.
+I develop methodology at the intersection of advanced Monte Carlo methods (PDMP samplers), surrogate modelling, and computational mechanics to solve inverse problems in material model calibration.
 My wider interests span generative modeling, simulation-based inference, and the fusion of machine learning with numerical methods for materials discovery and design.
 
 [//]: # (## Research)
