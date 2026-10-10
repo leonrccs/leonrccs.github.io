@@ -416,6 +416,11 @@ ninja.data = [{
           description: "",
           section: "Research",handler: () => {
               window.location.href = "/research/bayes.html";
+            },},{id: "research-probabilistic-itz-characterization",
+          title: 'probabilistic itz characterization',
+          description: "",
+          section: "Research",handler: () => {
+              window.location.href = "/research/itz.html";
             },},{id: "research-physics-informed-turbulence-closure",
           title: 'physics-informed turbulence closure',
           description: "",
