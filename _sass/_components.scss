@@ -259,3 +259,27 @@ ul.task-list input[type="checkbox"] {
 .d2h-diff-table {
   position: relative;
 }
+
+// About page intro: the photo floats beside name, subtitle and bio; content
+// with `clear: both` (e.g. the PDMP sandbox) starts below it at full width.
+// On narrow screens the photo is placed between the subtitle and the bio.
+
+@media (max-width: 575.98px) {
+  .about-intro {
+    display: flex;
+    flex-direction: column;
+
+    .about-header {
+      order: 1;
+    }
+
+    .about-profile {
+      order: 2;
+      margin: 0 0 1rem 0;
+    }
+
+    .about-bio {
+      order: 3;
+    }
+  }
+}
