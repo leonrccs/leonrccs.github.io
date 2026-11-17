@@ -29,6 +29,14 @@ I am building scalable Bayesian inference pipelines for physics-based models.
 I develop methodology at the intersection of advanced Monte Carlo methods (PDMP samplers), surrogate modelling, and computational mechanics to solve inverse problems in material model calibration.
 My wider interests span generative modeling, simulation-based inference, and the fusion of machine learning with numerical methods for materials discovery and design.
 
+<div id="pdmp-sandbox" class="card p-3 mt-4 mb-4" style="clear: both;">
+    <h3 class="mb-2">A tiny PDMP sandbox</h3>
+    <p class="text-muted mb-3">
+        Try out our surrogate-enhanced Zig-zag sampler on a non-Gaussian problem. Drag the means of the Gaussian mixture to create harder, multi-modal posteriors. <a href="{{ '/research/bayes/' | relative_url }}">Learn more about PDMP sampling →</a>
+    </p>
+    {% include research-pdmp.html %}
+</div>
+
 [//]: # (## Research)
 
 [//]: # ()

@@ -15,6 +15,15 @@
 </div>
 <script>
 (function(){
+  // Resize the iframe to the height reported by the embedded sandbox.
+  var iframe = document.currentScript.previousElementSibling.querySelector('iframe');
+  window.addEventListener('message', function(e) {
+    if (e.source !== iframe.contentWindow || !e.data || e.data.type !== 'pdmp-height') return;
+    var h = Number(e.data.height);
+    if (h > 0) iframe.style.height = h + 'px';
+  });
+})();
+(function(){
   if (!window.matchMedia('(hover: none) and (pointer: coarse)').matches) return;
   var wrap = document.currentScript.previousElementSibling;
   var overlay = wrap.querySelector('.pdmp-touch-overlay');
