@@ -41,7 +41,7 @@ Each likelihood evaluation requires a finite-element solve, so we sample the pos
 Micro-cantilevers of different aggregates behave appreciably differently, a manifestation of the intrinsic spatial randomness of hardened cement paste.
 A **pooled** model fits one descriptor vector to all specimens and therefore conflates model error with this material variability.
 A **hierarchical** model instead treats the specimens as draws from a common population, and separates what the finite data leave unresolved (which shrinks as more specimens are added) from the aggregate-to-aggregate variability (which does not).
-To keep sampling its much larger state space affordable, we extend the sampler to a *local* bouncy particle sampler that exploits the sparse structure of the hierarchical posterior, such that a candidate event still costs a single finite-element solve.
+To keep sampling its much larger state space affordable, we extend the sampler to a _local_ bouncy particle sampler that exploits the sparse structure of the hierarchical posterior, such that a candidate event still costs a single finite-element solve.
 
 <div class="row">
     <div class="col-12 col-md-10 mx-auto mt-3 mt-md-0">
@@ -66,7 +66,7 @@ The calibration also places the ITZ thickness above the 50 µm commonly assumed 
 
 ## Why it matters at the mesoscale
 
-In a concrete mesostructure every aggregate carries its own, unobserved ITZ, so a mesoscale prediction needs the predictive distribution of a *new* aggregate rather than one calibrated descriptor vector.
+In a concrete mesostructure every aggregate carries its own, unobserved ITZ, so a mesoscale prediction needs the predictive distribution of a _new_ aggregate rather than one calibrated descriptor vector.
 Propagated through the RVE, the hierarchical predictive yields broader distributions of the macroscopic stress, maximum von Mises stress and maximum principal strain.
 
 <div class="row">
