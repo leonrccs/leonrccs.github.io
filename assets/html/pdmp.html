@@ -253,7 +253,7 @@
             <div class="legend-item"><span class="swatch" style="background: #ef4444"></span> surrogate contours</div>
             <div class="legend-item"><span class="swatch" style="background: #111827"></span> zig-zag trajectory</div>
             <div class="legend-item"><span class="swatch-dot" style="background: #f59e0b"></span> draggable Gaussian means</div>
-            <div class="legend-item"><span class="swatch-dot" style="background: #16a34a"></span> initial GP samples</div>
+            <div class="legend-item"><span class="swatch-dot" style="background: #16a34a"></span> GP training points (Laplace draws)</div>
           </div>
         </div>
 
@@ -458,76 +458,265 @@
           return [gx, gy];
         }
 
-        function solveLinearSystem(A, b) {
+        // ---------- dense linear algebra helpers ----------
+        function cholesky(A) {
+          // Lower-triangular Cholesky factor of a symmetric matrix, or null if not positive definite.
           const n = A.length;
-          const M = A.map((row, i) => row.slice().concat([b[i]]));
-          for (let k = 0; k < n; k++) {
-            let pivot = k,
-              best = Math.abs(M[k][k]);
-            for (let i = k + 1; i < n; i++) {
-              const v = Math.abs(M[i][k]);
-              if (v > best) {
-                best = v;
-                pivot = i;
+          const L = Array.from({ length: n }, () => new Float64Array(n));
+          for (let i = 0; i < n; i++) {
+            for (let j = 0; j <= i; j++) {
+              let s = A[i][j];
+              for (let k = 0; k < j; k++) s -= L[i][k] * L[j][k];
+              if (i === j) {
+                if (!(s > 0)) return null;
+                L[i][i] = Math.sqrt(s);
+              } else {
+                L[i][j] = s / L[j][j];
               }
             }
-            if (pivot !== k) {
-              const tmp = M[k];
-              M[k] = M[pivot];
-              M[pivot] = tmp;
-            }
-            const diag = Math.abs(M[k][k]) < 1e-12 ? (M[k][k] >= 0 ? 1e-12 : -1e-12) : M[k][k];
-            for (let i = k + 1; i < n; i++) {
-              const f = M[i][k] / diag;
-              for (let j = k; j <= n; j++) M[i][j] -= f * M[k][j];
-            }
           }
-          const xsol = Array(n).fill(0);
+          return L;
+        }
+        function cholSolve(L, b) {
+          const n = L.length;
+          const z = new Float64Array(n);
+          for (let i = 0; i < n; i++) {
+            let s = b[i];
+            for (let k = 0; k < i; k++) s -= L[i][k] * z[k];
+            z[i] = s / L[i][i];
+          }
+          const xsol = new Float64Array(n);
           for (let i = n - 1; i >= 0; i--) {
-            let s = M[i][n];
-            for (let j = i + 1; j < n; j++) s -= M[i][j] * xsol[j];
-            const diag = Math.abs(M[i][i]) < 1e-12 ? (M[i][i] >= 0 ? 1e-12 : -1e-12) : M[i][i];
-            xsol[i] = s / diag;
+            let s = z[i];
+            for (let k = i + 1; k < n; k++) s -= L[k][i] * xsol[k];
+            xsol[i] = s / L[i][i];
           }
           return xsol;
         }
+        function randn() {
+          let u = 0;
+          while (u === 0) u = Math.random();
+          return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * Math.random());
+        }
 
-        function buildGP(trainX, trainY) {
-          const n = trainX.length;
-          const length = 1.55,
-            sigmaF = 1.0,
-            noise = 1e-6;
-          function kernel(a, b) {
-            const dx = a[0] - b[0],
-              dy = a[1] - b[1];
-            return sigmaF * sigmaF * Math.exp((-0.5 * (dx * dx + dy * dy)) / (length * length));
+        // ---------- Laplace approximation (find_mean + find_curvature) ----------
+        function hessLogDensity(theta) {
+          // Central finite differences of the analytic gradient, symmetrised.
+          const h = 1e-4;
+          const H = [
+            [0, 0],
+            [0, 0],
+          ];
+          for (let j = 0; j < 2; j++) {
+            const tp = theta.slice(),
+              tm = theta.slice();
+            tp[j] += h;
+            tm[j] -= h;
+            const gp = gradLogDensity(tp),
+              gm = gradLogDensity(tm);
+            for (let i = 0; i < 2; i++) H[i][j] = (gp[i] - gm[i]) / (2 * h);
           }
-          const mean = trainY.reduce((s, v) => s + v, 0) / n;
-          const centered = trainY.map((v) => v - mean);
-          const K = Array.from({ length: n }, (_, i) => Array.from({ length: n }, (_, j) => kernel(trainX[i], trainX[j]) + (i === j ? noise : 0)));
-          const alpha = solveLinearSystem(K, centered);
+          const off = 0.5 * (H[0][1] + H[1][0]);
+          H[0][1] = H[1][0] = off;
+          return H;
+        }
+
+        function findMode() {
+          // Initial guess from a coarse grid (stand-in for find_mean's x_0), then damped Newton ascent.
+          let xk = [0, 0],
+            best = -Infinity;
+          for (let i = 0; i <= 48; i++) {
+            for (let j = 0; j <= 48; j++) {
+              const p = [xDomain[0] + (i / 48) * (xDomain[1] - xDomain[0]), yDomain[0] + (j / 48) * (yDomain[1] - yDomain[0])];
+              const v = logDensity(p);
+              if (v > best) {
+                best = v;
+                xk = p;
+              }
+            }
+          }
+          let fk = best;
+          for (let it = 0; it < 100; it++) {
+            const g = gradLogDensity(xk);
+            const H = hessLogDensity(xk);
+            const P = [
+              [-H[0][0], -H[0][1]],
+              [-H[1][0], -H[1][1]],
+            ];
+            const LP = cholesky(P);
+            // Newton step if the negative Hessian is SPD, otherwise a scaled gradient step.
+            let d = LP ? Array.from(cholSolve(LP, g)) : [g[0] * sharedVariance(), g[1] * sharedVariance()];
+            let step = 1,
+              xn = xk,
+              fn = fk;
+            while (step > 1e-8) {
+              xn = [xk[0] + step * d[0], xk[1] + step * d[1]];
+              fn = logDensity(xn);
+              if (fn >= fk) break;
+              step *= 0.5;
+            }
+            if (fn < fk) break;
+            const moved = Math.hypot(xn[0] - xk[0], xn[1] - xk[1]);
+            xk = xn;
+            fk = fn;
+            if (moved < 1e-10) break;
+          }
+          return xk;
+        }
+
+        function buildLaplace() {
+          const mode = findMode();
+          const H = hessLogDensity(mode);
+          // Precision = -Hessian, eigenvalues floored (cf. min_curvature) so the base is a proper Gaussian.
+          const a = -H[0][0],
+            b = -H[0][1],
+            c = -H[1][1];
+          const tr2 = 0.5 * (a + c),
+            rad = Math.sqrt(0.25 * (a - c) * (a - c) + b * b);
+          const lams = [tr2 + rad, tr2 - rad];
+          let vecs;
+          if (Math.abs(b) > 1e-12) {
+            vecs = lams.map((l) => {
+              const vx = l - c,
+                vy = b,
+                nrm = Math.hypot(vx, vy);
+              return [vx / nrm, vy / nrm];
+            });
+          } else {
+            vecs =
+              a >= c
+                ? [
+                    [1, 0],
+                    [0, 1],
+                  ]
+                : [
+                    [0, 1],
+                    [1, 0],
+                  ];
+          }
+          const minCurv = 0.05;
+          const P = [
+            [0, 0],
+            [0, 0],
+          ];
+          const C = [
+            [0, 0],
+            [0, 0],
+          ];
+          for (let k = 0; k < 2; k++) {
+            const l = Math.max(lams[k], minCurv);
+            for (let i = 0; i < 2; i++)
+              for (let j = 0; j < 2; j++) {
+                P[i][j] += l * vecs[k][i] * vecs[k][j];
+                C[i][j] += (vecs[k][i] * vecs[k][j]) / l;
+              }
+          }
+          const LC = cholesky(C);
+          const logMode = logDensity(mode);
+          return {
+            mode,
+            cov: C,
+            // log N(x; mode, C) shifted so that it matches the target at the mode (eval(..., delta=True)).
+            eval(theta) {
+              const dx = theta[0] - mode[0],
+                dy = theta[1] - mode[1];
+              return logMode - 0.5 * (P[0][0] * dx * dx + 2 * P[0][1] * dx * dy + P[1][1] * dy * dy);
+            },
+            grad(theta) {
+              const dx = theta[0] - mode[0],
+                dy = theta[1] - mode[1];
+              return [-(P[0][0] * dx + P[0][1] * dy), -(P[1][0] * dx + P[1][1] * dy)];
+            },
+            sample() {
+              const z0 = randn(),
+                z1 = randn();
+              return [mode[0] + LC[0][0] * z0, mode[1] + LC[1][0] * z0 + LC[1][1] * z1];
+            },
+          };
+        }
+
+        // ---------- GP on the Laplace residual ----------
+        function buildGP(trainX, trainY) {
+          // Constant mean + ARD RBF kernel. Lengthscales chosen by maximising the (profiled)
+          // log marginal likelihood on a grid, a cheap stand-in for the L-BFGS hyper-parameter fit.
+          const n = trainX.length;
+          const mu = trainY.reduce((s, v) => s + v, 0) / n;
+          const yc = trainY.map((v) => v - mu);
+          const grid = d3.range(16).map((i) => 0.15 * Math.pow(10 / 0.15, i / 15));
+
+          function corrMatrix(ls, nugget) {
+            return Array.from({ length: n }, (_, i) =>
+              Array.from({ length: n }, (_, j) => {
+                const d0 = (trainX[i][0] - trainX[j][0]) / ls[0],
+                  d1 = (trainX[i][1] - trainX[j][1]) / ls[1];
+                return Math.exp(-0.5 * (d0 * d0 + d1 * d1)) + (i === j ? nugget : 0);
+              })
+            );
+          }
+          function factor(ls) {
+            for (let nugget = 1e-6; nugget <= 1e-1; nugget *= 10) {
+              const L = cholesky(corrMatrix(ls, nugget));
+              if (L) return L;
+            }
+            return null;
+          }
+
+          let best = null;
+          for (const l0 of grid) {
+            for (const l1 of grid) {
+              const L = factor([l0, l1]);
+              if (!L) continue;
+              const a = cholSolve(L, yc);
+              let quad = 0,
+                logdet = 0;
+              for (let i = 0; i < n; i++) {
+                quad += yc[i] * a[i];
+                logdet += 2 * Math.log(L[i][i]);
+              }
+              const sf2 = Math.max(quad / n, 1e-12);
+              const lml = -0.5 * n * Math.log(sf2) - 0.5 * logdet;
+              if (!best || lml > best.lml) best = { lml, ls: [l0, l1], sf2, a };
+            }
+          }
+          const ls = best ? best.ls : [1.5, 1.5];
+          const sf2 = best ? best.sf2 : 0;
+          // alpha = (sf2 * R)^{-1} y_c ; with k(x, x_i) = sf2 * r(x, x_i) the sf2 factors cancel.
+          const alpha = best ? Array.from(best.a) : new Array(n).fill(0);
+
           function predict(theta) {
-            let m = mean,
+            let m = mu,
               gx = 0,
               gy = 0;
             for (let i = 0; i < n; i++) {
               const dx = theta[0] - trainX[i][0];
               const dy = theta[1] - trainX[i][1];
-              const k = sigmaF * sigmaF * Math.exp((-0.5 * (dx * dx + dy * dy)) / (length * length));
-              m += alpha[i] * k;
-              const fac = -k / (length * length);
-              gx += alpha[i] * fac * dx;
-              gy += alpha[i] * fac * dy;
+              const r = Math.exp(-0.5 * ((dx * dx) / (ls[0] * ls[0]) + (dy * dy) / (ls[1] * ls[1])));
+              const w = alpha[i] * r;
+              m += w;
+              gx -= (w * dx) / (ls[0] * ls[0]);
+              gy -= (w * dy) / (ls[1] * ls[1]);
             }
             return { mean: m, grad: [gx, gy] };
           }
-          return { predict, trainX, trainY };
+          return { predict, ls, sf2 };
         }
 
-        function latinHyperCube(n, xlim, ylim) {
-          const xs = d3.shuffle(d3.range(n)).map((_, i) => xlim[0] + ((i + Math.random()) / n) * (xlim[1] - xlim[0]));
-          const ys = d3.shuffle(d3.range(n)).map((_, i) => ylim[0] + ((i + Math.random()) / n) * (ylim[1] - ylim[0]));
-          return d3.range(n).map((i) => [xs[i], ys[i]]);
+        function buildSurrogate(nTrain) {
+          // GaussianProcess(training_strategy='laplace'): training inputs are draws from the
+          // Laplace approximation; the GP models target - Laplace, and the surrogate is Laplace + GP.
+          const lap = buildLaplace();
+          const trainX = d3.range(nTrain).map(() => lap.sample());
+          const trainY = trainX.map((p) => logDensity(p) - lap.eval(p));
+          const gp = buildGP(trainX, trainY);
+          return {
+            trainX,
+            laplace: lap,
+            predict(theta) {
+              const g = gp.predict(theta);
+              const lg = lap.grad(theta);
+              return { mean: lap.eval(theta) + g.mean, grad: [lg[0] + g.grad[0], lg[1] + g.grad[1]] };
+            },
+          };
         }
 
         function makeGridValue(fn) {
@@ -695,19 +884,8 @@
           statViolations.textContent = "0";
         }
 
-        function calibrateOffset(gp, trainX) {
-          const diffs = [0, 0];
-          for (const pt of trainX) {
-            const gt = gradLogDensity(pt);
-            const gs = gp.predict(pt).grad;
-            diffs[0] = Math.max(diffs[0], Math.abs(gt[0] - gs[0]));
-            diffs[1] = Math.max(diffs[1], Math.abs(gt[1] - gs[1]));
-          }
-          return [0.16 + 1.2 * diffs[0], 0.16 + 1.2 * diffs[1]];
-        }
-
-        function surrogateRate(theta, v, gp, offset, gamma) {
-          const g = gp.predict(theta).grad;
+        function surrogateRate(theta, v, sur, offset, gamma) {
+          const g = sur.predict(theta).grad;
           return [Math.max(-g[0] * v[0] + offset[0], 0) + gamma, Math.max(-g[1] * v[1] + offset[1], 0) + gamma];
         }
         function trueRate(theta, v, gamma) {
@@ -715,40 +893,42 @@
           return [Math.max(-g[0] * v[0], 0) + gamma, Math.max(-g[1] * v[1], 0) + gamma];
         }
 
-        function proposeEvent(theta, v, gp, offset, gamma) {
-          const dt = 0.03;
-          const s = [-Math.log(Math.random()), -Math.log(Math.random())];
-          let taus = [0, 0],
+        function proposeEvent(theta, v, sur, offset, gamma, s) {
+          // Inverse-CDF on the surrogate rates: march all coordinates together with the trapezoidal
+          // rule until the first one exceeds its exponential threshold, then back off within the last
+          // step with the exact solution for a linearly varying rate.
+          const dt = 0.01,
+            maxSteps = 200000;
+          let tau = 0,
             integ = [0, 0],
-            r0 = surrogateRate(theta, v, gp, offset, gamma),
-            r1 = [0, 0],
-            safety = 0;
-          while ((integ[0] < s[0] || integ[1] < s[1]) && safety < 14000) {
-            safety++;
-            const probe = [theta[0] + (taus[0] + dt) * v[0], theta[1] + (taus[0] + dt) * v[1]];
-            r1 = surrogateRate(probe, v, gp, offset, gamma);
-            for (let i = 0; i < 2; i++) {
-              if (integ[i] < s[i]) {
-                integ[i] += 0.5 * (r0[i] + r1[i]) * dt;
-                taus[i] += dt;
-              }
-            }
-            r0 = r1.slice();
+            r0 = surrogateRate(theta, v, sur, offset, gamma),
+            rStart = r0,
+            r1 = r0,
+            steps = 0;
+          while (integ[0] < s[0] && integ[1] < s[1] && steps < maxSteps) {
+            steps++;
+            const probe = [theta[0] + (tau + dt) * v[0], theta[1] + (tau + dt) * v[1]];
+            r1 = surrogateRate(probe, v, sur, offset, gamma);
+            integ[0] += 0.5 * (r0[0] + r1[0]) * dt;
+            integ[1] += 0.5 * (r0[1] + r1[1]) * dt;
+            tau += dt;
+            rStart = r0;
+            r0 = r1;
           }
-          const corrected = [taus[0], taus[1]];
-          for (let i = 0; i < 2; i++) {
-            const ri = Math.max(r1[i], 1e-8);
-            corrected[i] = taus[i] - Math.max(integ[i] - s[i], 0) / ri;
-          }
-          const j = corrected[0] < corrected[1] ? 0 : 1;
-          return { tau: corrected[j], dim: j };
+          const j = (integ[0] - s[0]) / r1[0] > (integ[1] - s[1]) / r1[1] ? 0 : 1;
+          const over = Math.max(integ[j] - s[j], 0);
+          const a = (r1[j] - rStart[j]) / dt;
+          const disc = r1[j] * r1[j] - 2 * a * over;
+          const t = tau - (2 * over) / (r1[j] + Math.sqrt(Math.max(disc, 0)));
+          return { tau: Math.max(t, 0), dim: j };
         }
 
         function runSampler(nInit, nEvents) {
-          const trainX = latinHyperCube(nInit, [-4.2, 4.2], [-3.8, 3.8]);
-          const trainY = trainX.map(logDensity);
-          const gp = buildGP(trainX, trainY);
-          let offset = calibrateOffset(gp, trainX);
+          const sur = buildSurrogate(nInit);
+          const trainX = sur.trainX;
+          // Offsets start at zero and only grow when a bound violation is detected (no shrinkage,
+          // i.e. offset_shrinkage = 0 as in the reference implementation).
+          const offset = [0, 0];
 
           let theta = [-5.2, 4.7];
           let v = [1, -1];
@@ -758,33 +938,36 @@
             rejected = 0,
             violations = 0,
             evals = trainX.length;
+          let s = null;
 
           for (let k = 0; k < nEvents; k++) {
-            const cand = proposeEvent(theta, v, gp, offset, gamma);
-            theta = [theta[0] + cand.tau * v[0], theta[1] + cand.tau * v[1]];
-            const lamTrue = trueRate(theta, v, gamma);
-            const lamProp = surrogateRate(theta, v, gp, offset, gamma);
+            // Exponential thresholds are kept after a violation so the event is re-simulated
+            // from the same state with the enlarged bound.
+            if (!s) s = [-Math.log(1 - Math.random()), -Math.log(1 - Math.random())];
+            const cand = proposeEvent(theta, v, sur, offset, gamma, s);
+            const j = cand.dim;
+            const prop = [theta[0] + cand.tau * v[0], theta[1] + cand.tau * v[1]];
+            const m = trueRate(prop, v, gamma)[j];
+            const M = surrogateRate(prop, v, sur, offset, gamma)[j];
             evals += 1;
 
-            if (lamTrue[cand.dim] > lamProp[cand.dim] + 1e-10) {
-              const gap = lamTrue[cand.dim] - lamProp[cand.dim];
-              offset[cand.dim] += 1.15 * gap + 0.02;
+            if (m > M) {
+              // Bound too tight: enlarge the offset, revert the step and re-propose.
+              offset[j] += 1.01 * (m - M) + 1e-3;
               violations += 1;
-              rejected += 1;
-            } else {
-              const a = lamTrue[cand.dim] / Math.max(lamProp[cand.dim], 1e-12);
-              if (Math.random() < a) {
-                v[cand.dim] *= -1;
-                accepted += 1;
-              } else {
-                rejected += 1;
-              }
+              continue;
             }
-            offset[0] = Math.max(0.05, 0.9987 * offset[0]);
-            offset[1] = Math.max(0.05, 0.9987 * offset[1]);
+            theta = prop;
+            if (Math.random() < m / M) {
+              v[j] *= -1;
+              accepted += 1;
+            } else {
+              rejected += 1;
+            }
+            s = null;
             path.push(theta.slice());
           }
-          return { trainX, gp, path, accepted, rejected, violations, offset, evals };
+          return { trainX, gp: sur, path, accepted, rejected, violations, offset, evals };
         }
 
         function setBusy(busy) {
