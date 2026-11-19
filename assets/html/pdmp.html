@@ -255,7 +255,7 @@
             <div class="legend-item">
               <span class="swatch" style="background: linear-gradient(90deg, #a5cd90, #3a8b97, #2c3172)"></span> surrogate contours
             </div>
-            <div class="legend-item"><span class="swatch" style="background: #111827"></span> zig-zag trajectory</div>
+            <div class="legend-item"><span class="swatch" style="background: #1f77b4; opacity: 0.5"></span> zig-zag trajectory</div>
             <div class="legend-item"><span class="swatch-dot" style="background: #f59e0b"></span> draggable Gaussian means</div>
             <div class="legend-item"><span class="swatch-dot" style="background: #16a34a"></span> GP training points (Laplace draws)</div>
           </div>
@@ -871,11 +871,11 @@
             .join("path")
             .attr("d", line)
             .attr("fill", "none")
-            .attr("stroke", "#111827")
-            .attr("stroke-width", 1.95)
+            .attr("stroke", "#1f77b4")
+            .attr("stroke-width", 2.6)
             .attr("stroke-linejoin", "round")
             .attr("stroke-linecap", "round")
-            .attr("opacity", 0.93);
+            .attr("opacity", 0.8);
           gPath
             .selectAll("circle")
             .data([points[0], points[points.length - 1]])
