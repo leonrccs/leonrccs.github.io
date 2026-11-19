@@ -7,4 +7,4 @@ github_repos:
   - SLIMM-Lab/pdmp
   - SLIMM-Lab/mcmc-with-surrogates
   - leonrccs/data_driven_rans
-  - leonrccs/dd_simpleFoam
+  - leonrccs/dd-simpleFoam
