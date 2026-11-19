@@ -249,8 +249,12 @@
         <div class="panel viz-panel">
           <svg id="viz" viewBox="0 0 700 500" aria-label="Interactive posterior and sampler visualization"></svg>
           <div class="legend">
-            <div class="legend-item"><span class="swatch" style="background: #3b82f6"></span> ground-truth contours</div>
-            <div class="legend-item"><span class="swatch" style="background: #ef4444"></span> surrogate contours</div>
+            <div class="legend-item">
+              <span class="swatch" style="background: linear-gradient(90deg, #f6c19f, #dd2c45, #6a1f56, #03051a)"></span> ground-truth contours
+            </div>
+            <div class="legend-item">
+              <span class="swatch" style="background: linear-gradient(90deg, #a5cd90, #3a8b97, #2c3172)"></span> surrogate contours
+            </div>
             <div class="legend-item"><span class="swatch" style="background: #111827"></span> zig-zag trajectory</div>
             <div class="legend-item"><span class="swatch-dot" style="background: #f59e0b"></span> draggable Gaussian means</div>
             <div class="legend-item"><span class="swatch-dot" style="background: #16a34a"></span> GP training points (Laplace draws)</div>
@@ -744,12 +748,24 @@
           return transformed.map((c) => ({ value: c.value, d: geoPath(c) }));
         }
 
+        // seaborn "rocket_r" (reversed rocket), sampled at 11 evenly spaced stops.
+        const rocketR = d3.interpolateRgbBasis(
+          ["#03051a", "#221331", "#451c47", "#6a1f56", "#921c5b", "#b91657", "#dd2c45", "#f06043", "#f5936a", "#f6c19f", "#faebdd"].reverse()
+        );
+
+        // seaborn "crest" (light green -> dark blue), approximated by evenly spaced stops.
+        const crest = d3.interpolateRgbBasis(["#a5cd90", "#79b791", "#54a193", "#3a8b97", "#29759a", "#255e99", "#2c4790", "#2c3172"]);
+
         function drawGroundTruth() {
           const values = makeGridValue(logDensity);
           const vmin = d3.min(values),
             vmax = d3.max(values);
-          const levels = d3.range(vmin + 0.33 * (vmax - vmin), vmax - 0.1, (vmax - vmin) / 6.2);
+          const levels = d3.range(vmin + 0.33 * (vmax - vmin), vmax - 0.1, (vmax - vmin) / 9.5);
           const paths = contourPathData(d3.contours().size([gridNX, gridNY]).thresholds(levels)(values));
+          const lo = levels[0],
+            hi = levels[levels.length - 1];
+          // Low-density contours light, high-density dark; skip the palest end so lines stay visible on white.
+          const stroke = (d) => rocketR(0.18 + 0.82 * (hi > lo ? (d.value - lo) / (hi - lo) : 1));
           gTrueContours
             .selectAll("path")
             .data(paths, (d) => d.value)
@@ -759,10 +775,10 @@
                   .append("path")
                   .attr("d", (d) => d.d)
                   .attr("fill", "none")
-                  .attr("stroke", "#3b82f6")
+                  .attr("stroke", stroke)
                   .attr("stroke-width", 1.8)
-                  .attr("stroke-opacity", 0.85),
-              (update) => update.attr("d", (d) => d.d),
+                  .attr("stroke-opacity", 0.5),
+              (update) => update.attr("d", (d) => d.d).attr("stroke", stroke),
               (exit) => exit.remove()
             );
         }
@@ -775,8 +791,11 @@
           const values = makeGridValue((theta) => gp.predict(theta).mean);
           const vmin = d3.min(values),
             vmax = d3.max(values);
-          const levels = d3.range(vmin + 0.36 * (vmax - vmin), vmax - 0.12, (vmax - vmin) / 5.8);
+          const levels = d3.range(vmin + 0.36 * (vmax - vmin), vmax - 0.12, (vmax - vmin) / 9);
           const paths = contourPathData(d3.contours().size([gridNX, gridNY]).thresholds(levels)(values));
+          const lo = levels[0],
+            hi = levels[levels.length - 1];
+          const stroke = (d) => crest(0.1 + 0.9 * (hi > lo ? (d.value - lo) / (hi - lo) : 1));
           gSurContours
             .selectAll("path")
             .data(paths, (d) => d.value)
@@ -786,11 +805,11 @@
                   .append("path")
                   .attr("d", (d) => d.d)
                   .attr("fill", "none")
-                  .attr("stroke", "#ef4444")
-                  .attr("stroke-width", 1.2)
+                  .attr("stroke", stroke)
+                  .attr("stroke-width", 1.4)
                   .attr("stroke-dasharray", "6 4")
-                  .attr("stroke-opacity", 0.78),
-              (update) => update.attr("d", (d) => d.d),
+                  .attr("stroke-opacity", 0.65),
+              (update) => update.attr("d", (d) => d.d).attr("stroke", stroke),
               (exit) => exit.remove()
             );
         }
