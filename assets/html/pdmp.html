@@ -352,9 +352,18 @@
           .domain(yDomain)
           .range([margin.top + plotH, margin.top]);
 
+        svg
+          .append("defs")
+          .append("clipPath")
+          .attr("id", "plot-clip")
+          .append("rect")
+          .attr("x", margin.left)
+          .attr("y", margin.top)
+          .attr("width", plotW)
+          .attr("height", plotH);
         const gMain = svg.append("g");
-        const gTrueContours = gMain.append("g");
-        const gSurContours = gMain.append("g");
+        const gTrueContours = gMain.append("g").attr("clip-path", "url(#plot-clip)");
+        const gSurContours = gMain.append("g").attr("clip-path", "url(#plot-clip)");
         const gPath = gMain.append("g");
         const gSamples = gMain.append("g");
         const gHandles = gMain.append("g");
@@ -723,27 +732,48 @@
           };
         }
 
+        // The grid extends one real sample beyond the plot on each side, plus a ring of very low
+        // sentinel values, so d3.contours closes the level sets outside the visible area instead of
+        // along the plot edge. The overhang is hidden by the plot clip path.
+        const gridPad = 2;
+        const gridSize = [gridNX + 2 * gridPad, gridNY + 2 * gridPad];
         function makeGridValue(fn) {
-          const values = new Float32Array(gridNX * gridNY);
-          let idx = 0;
-          for (let j = 0; j < gridNY; j++) {
+          const [nx, ny] = gridSize;
+          const values = new Float64Array(nx * ny);
+          let vmin = Infinity,
+            vmax = -Infinity,
+            idx = 0;
+          for (let jj = 0; jj < ny; jj++) {
+            const j = jj - gridPad;
             const yy = yDomain[0] + (j / (gridNY - 1)) * (yDomain[1] - yDomain[0]);
-            for (let i = 0; i < gridNX; i++) {
+            for (let ii = 0; ii < nx; ii++) {
+              const i = ii - gridPad;
+              if (ii === 0 || jj === 0 || ii === nx - 1 || jj === ny - 1) {
+                values[idx++] = -1e12;
+                continue;
+              }
               const xx = xDomain[0] + (i / (gridNX - 1)) * (xDomain[1] - xDomain[0]);
-              values[idx++] = fn([xx, yy]);
+              const v = fn([xx, yy]);
+              values[idx++] = v;
+              // Level range from the visible part only.
+              if (i >= 0 && j >= 0 && i < gridNX && j < gridNY) {
+                if (v < vmin) vmin = v;
+                if (v > vmax) vmax = v;
+              }
             }
           }
-          return values;
+          return { values, vmin, vmax };
         }
 
-        function contourPathData(contours) {
+        function contourPathData(values, levels) {
+          const contours = d3.contours().size(gridSize).thresholds(levels)(values);
           const sx = plotW / (gridNX - 1),
             sy = plotH / (gridNY - 1);
           const geoPath = d3.geoPath(d3.geoIdentity().scale(1).translate([margin.left, margin.top]));
           const transformed = contours.map((c) => ({
             type: "MultiPolygon",
             value: c.value,
-            coordinates: c.coordinates.map((poly) => poly.map((ring) => ring.map(([gx, gy]) => [gx * sx, plotH - gy * sy]))),
+            coordinates: c.coordinates.map((poly) => poly.map((ring) => ring.map(([gx, gy]) => [(gx - gridPad) * sx, plotH - (gy - gridPad) * sy]))),
           }));
           return transformed.map((c) => ({ value: c.value, d: geoPath(c) }));
         }
@@ -757,11 +787,9 @@
         const crest = d3.interpolateRgbBasis(["#a5cd90", "#79b791", "#54a193", "#3a8b97", "#29759a", "#255e99", "#2c4790", "#2c3172"]);
 
         function drawGroundTruth() {
-          const values = makeGridValue(logDensity);
-          const vmin = d3.min(values),
-            vmax = d3.max(values);
+          const { values, vmin, vmax } = makeGridValue(logDensity);
           const levels = d3.range(vmin + 0.33 * (vmax - vmin), vmax - 0.1, (vmax - vmin) / 9.5);
-          const paths = contourPathData(d3.contours().size([gridNX, gridNY]).thresholds(levels)(values));
+          const paths = contourPathData(values, levels);
           const lo = levels[0],
             hi = levels[levels.length - 1];
           // Low-density contours light, high-density dark; skip the palest end so lines stay visible on white.
@@ -788,11 +816,9 @@
             gSurContours.selectAll("*").remove();
             return;
           }
-          const values = makeGridValue((theta) => gp.predict(theta).mean);
-          const vmin = d3.min(values),
-            vmax = d3.max(values);
+          const { values, vmin, vmax } = makeGridValue((theta) => gp.predict(theta).mean);
           const levels = d3.range(vmin + 0.36 * (vmax - vmin), vmax - 0.12, (vmax - vmin) / 9);
-          const paths = contourPathData(d3.contours().size([gridNX, gridNY]).thresholds(levels)(values));
+          const paths = contourPathData(values, levels);
           const lo = levels[0],
             hi = levels[levels.length - 1];
           const stroke = (d) => crest(0.1 + 0.9 * (hi > lo ? (d.value - lo) / (hi - lo) : 1));
