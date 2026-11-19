@@ -5,14 +5,14 @@ description:
 img: assets/img/project_covers/itz.png
 importance: 4
 category: applications
-related_publications: false
+related_publications: true
 ---
 
 The stiffness and cracking behaviour of concrete are strongly influenced by the **interfacial transition zone (ITZ)**: the thin shell of cement paste, only tens of micrometres thick, that surrounds every aggregate.
 Mesoscale models of concrete need the mechanical properties of this shell as input, yet they are poorly characterized and usually assigned through ad hoc reduction factors applied to the bulk paste.
 Reported estimates scatter widely between studies and rarely come with a quantified uncertainty.
 
-_This work is a draft manuscript that has not been submitted yet._
+The work is available as a preprint: {% cite riccius2026itzupscaling %}.
 
 ## From micro-cantilever tests to mesoscale predictions
 
