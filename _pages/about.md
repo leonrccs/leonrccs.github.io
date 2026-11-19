@@ -32,7 +32,7 @@ My wider interests span generative modelling, simulation-based inference, and th
 <div id="pdmp-sandbox" class="card p-3 mt-4 mb-4" style="clear: both;">
     <h3 class="mb-2">A tiny PDMP sandbox</h3>
     <p class="text-muted mb-3">
-        Try out our surrogate-enhanced Zig-zag sampler on a non-Gaussian problem. Drag the means of the Gaussian mixture to create harder, multi-modal posteriors. <a href="{{ '/research/bayes/' | relative_url }}">Learn more about PDMP sampling →</a>
+        Try out our surrogate-enhanced PDMP samplers on a non-Gaussian problem. Drag the means of the Gaussian mixture to create harder, multi-modal posteriors. <a href="{{ '/research/bayes/' | relative_url }}">Learn more about PDMP sampling →</a>
     </p>
     {% include research-pdmp.html %}
 </div>
