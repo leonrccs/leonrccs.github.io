@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Surrogate-enhanced Zig-Zag sampler demo</title>
+    <title>Surrogate-enhanced PDMP sampler demo</title>
     <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
     <style>
       :root {
@@ -94,6 +94,15 @@
       input[type="range"] {
         width: 100%;
       }
+      select {
+        width: 100%;
+        padding: 6px 8px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--panel);
+        color: inherit;
+        font-size: 13px;
+      }
       .value {
         font-weight: 700;
         color: var(--accent);
@@ -141,17 +150,22 @@
         height: 16px;
       }
       .stats {
-        margin-top: 12px;
-        padding-top: 10px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px 22px;
+        margin: 8px 2px 0 2px;
+        padding-top: 8px;
         border-top: 1px solid var(--border);
         font-size: 13px;
         line-height: 1.45;
       }
       .stats .row {
         display: flex;
-        justify-content: space-between;
-        gap: 14px;
-        margin: 5px 0;
+        gap: 6px;
+      }
+      .stats .row > div:last-child {
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
       }
       .stats .k {
         color: var(--muted);
@@ -238,10 +252,11 @@
   <body>
     <div class="wrap">
       <div class="title">
-        <h1>Surrogate-enhanced Zig-Zag sampler demo</h1>
+        <h1>Surrogate-enhanced PDMP sampler demo</h1>
         <p>
           Drag the orange Gaussian means to create a smooth unimodal or multimodal posterior in 2D. Adjust the shared variance, choose the number of
-          initial surrogate samples, and run a lightweight browser demo of a surrogate-assisted Zig-Zag sampler with offset-corrected thinning.
+          initial surrogate samples, and run a lightweight browser demo of a surrogate-assisted Zig-Zag or Bouncy Particle sampler with
+          offset-corrected thinning.
         </p>
       </div>
 
@@ -255,14 +270,40 @@
             <div class="legend-item">
               <span class="swatch" style="background: linear-gradient(90deg, #a5cd90, #3a8b97, #2c3172)"></span> surrogate contours
             </div>
-            <div class="legend-item"><span class="swatch" style="background: #1f77b4; opacity: 0.5"></span> zig-zag trajectory</div>
+            <div class="legend-item"><span class="swatch" style="background: #1f77b4; opacity: 0.5"></span> sampler trajectory</div>
             <div class="legend-item"><span class="swatch-dot" style="background: #f59e0b"></span> draggable Gaussian means</div>
             <div class="legend-item"><span class="swatch-dot" style="background: #16a34a"></span> GP training points (Laplace draws)</div>
+          </div>
+          <div class="stats" id="stats">
+            <div class="row">
+              <div class="k">Status</div>
+              <div id="stat-status">ready</div>
+            </div>
+            <div class="row">
+              <div class="k">Accepted events</div>
+              <div id="stat-accepted">0</div>
+            </div>
+            <div class="row">
+              <div class="k">Refreshes</div>
+              <div id="stat-refreshes">–</div>
+            </div>
+            <div class="row">
+              <div class="k">Offset violations</div>
+              <div id="stat-violations">0</div>
+            </div>
           </div>
         </div>
 
         <div class="panel controls">
           <h2>Controls</h2>
+
+          <div class="control">
+            <label for="samplerSelect">Sampler</label>
+            <select id="samplerSelect">
+              <option value="zigzag" selected>Zig-Zag</option>
+              <option value="bps">Bouncy Particle</option>
+            </select>
+          </div>
 
           <div class="control">
             <label for="varianceSlider">Shared Gaussian variance: <span class="value" id="varianceValue">0.55</span></label>
@@ -287,21 +328,6 @@
           <div class="control">
             <button id="runBtn">Run inference</button>
             <button id="resetBtn" class="small-btn">Reset posterior</button>
-          </div>
-
-          <div class="stats" id="stats">
-            <div class="row">
-              <div class="k">Status</div>
-              <div id="stat-status">ready</div>
-            </div>
-            <div class="row">
-              <div class="k">Accepted events</div>
-              <div id="stat-accepted">0</div>
-            </div>
-            <div class="row">
-              <div class="k">Offset violations</div>
-              <div id="stat-violations">0</div>
-            </div>
           </div>
 
           <div class="footer-note">
@@ -405,6 +431,8 @@
         const statStatus = document.getElementById("stat-status");
         const statAccepted = document.getElementById("stat-accepted");
         const statViolations = document.getElementById("stat-violations");
+        const statRefreshes = document.getElementById("stat-refreshes");
+        const samplerSelect = document.getElementById("samplerSelect");
 
         const means0 = [
           { id: 0, x: -1.6, y: 1.25, w: 1.0 },
@@ -927,6 +955,7 @@
           statStatus.textContent = "ready";
           statAccepted.textContent = "0";
           statViolations.textContent = "0";
+          statRefreshes.textContent = "–";
         }
 
         function surrogateRate(theta, v, sur, offset, gamma) {
@@ -968,8 +997,114 @@
           return { tau: Math.max(t, 0), dim: j };
         }
 
-        function runSampler(nInit, nEvents) {
+        function runSampler(kind, nInit, nEvents) {
           const sur = buildSurrogate(nInit);
+          return kind === "bps" ? runBPS(sur, nEvents) : runZigZag(sur, nEvents);
+        }
+
+        // ---------- Bouncy Particle Sampler (bouncy_particle.py) ----------
+        function bpsSurrogateRate(theta, v, sur, offset, gamma) {
+          const g = sur.predict(theta).grad;
+          return Math.max(-(g[0] * v[0] + g[1] * v[1]) + offset, 0) + gamma;
+        }
+
+        function proposeBounce(theta, v, sur, offset, gamma, s, tRefresh) {
+          // Same trapezoidal march + second-order back-off as for Zig-Zag, on the single scalar
+          // reflection rate. Integration is capped at the refresh time: if the threshold is not
+          // reached before it, the next event is a refresh.
+          const dt = 0.01;
+          let tau = 0,
+            integ = 0,
+            r0 = bpsSurrogateRate(theta, v, sur, offset, gamma),
+            rStart = r0,
+            r1 = r0;
+          while (integ < s && tau < tRefresh) {
+            const probe = [theta[0] + (tau + dt) * v[0], theta[1] + (tau + dt) * v[1]];
+            r1 = bpsSurrogateRate(probe, v, sur, offset, gamma);
+            integ += 0.5 * (r0 + r1) * dt;
+            tau += dt;
+            rStart = r0;
+            r0 = r1;
+          }
+          if (integ < s) return { tau: tRefresh, refresh: true };
+          const over = integ - s;
+          const a = (r1 - rStart) / dt;
+          const disc = r1 * r1 - 2 * a * over;
+          const t = tau - (2 * over) / (r1 + Math.sqrt(Math.max(disc, 0)));
+          return t < tRefresh ? { tau: Math.max(t, 0), refresh: false } : { tau: tRefresh, refresh: true };
+        }
+
+        function randomUnitVelocity() {
+          const z = [randn(), randn()];
+          const nrm = Math.hypot(z[0], z[1]);
+          return [z[0] / nrm, z[1] / nrm];
+        }
+
+        function runBPS(sur, nEvents) {
+          const trainX = sur.trainX;
+          // Scalar offset, starting at zero and only grown on violations (offset_shrinkage = 0).
+          let offset = 0;
+          const gamma = 0.02,
+            refreshRate = 0.1;
+
+          let theta = [-5.2, 4.7];
+          let v = [Math.SQRT1_2, -Math.SQRT1_2];
+          const path = [theta.slice()];
+          let accepted = 0,
+            rejected = 0,
+            refreshes = 0,
+            violations = 0,
+            evals = trainX.length;
+          // Both the bounce threshold and the refresh time are kept across a violation rollback.
+          let s = null,
+            tRefresh = null;
+
+          for (let k = 0; k < nEvents; k++) {
+            if (s === null) s = -Math.log(1 - Math.random());
+            if (tRefresh === null) tRefresh = -Math.log(1 - Math.random()) / refreshRate;
+            const cand = proposeBounce(theta, v, sur, offset, gamma, s, tRefresh);
+            const prop = [theta[0] + cand.tau * v[0], theta[1] + cand.tau * v[1]];
+
+            if (cand.refresh) {
+              theta = prop;
+              v = randomUnitVelocity();
+              refreshes += 1;
+              s = tRefresh = null;
+              path.push(theta.slice());
+              continue;
+            }
+
+            const g = gradLogDensity(prop);
+            const m = Math.max(-(g[0] * v[0] + g[1] * v[1]), 0) + gamma;
+            const M = bpsSurrogateRate(prop, v, sur, offset, gamma);
+            evals += 1;
+
+            if (m > M) {
+              // Bound too tight: enlarge the offset, revert the step and re-propose.
+              offset += 1.01 * (m - M) + 1e-3;
+              violations += 1;
+              continue;
+            }
+            theta = prop;
+            if (Math.random() < m / M) {
+              // Reflect off the level set of the true target: v' = v - 2 (v.g / |g|^2) g.
+              const gg = g[0] * g[0] + g[1] * g[1];
+              if (gg > 1e-10) {
+                const c = (2 * (v[0] * g[0] + v[1] * g[1])) / gg;
+                v = [v[0] - c * g[0], v[1] - c * g[1]];
+              }
+              accepted += 1;
+            } else {
+              rejected += 1;
+            }
+            s = tRefresh = null;
+            path.push(theta.slice());
+          }
+          return { trainX, gp: sur, path, accepted, rejected, refreshes, violations, offset, evals };
+        }
+
+        // ---------- Zig-Zag sampler (zigzag.py) ----------
+        function runZigZag(sur, nEvents) {
           const trainX = sur.trainX;
           // Offsets start at zero and only grow when a bound violation is detected (no shrinkage,
           // i.e. offset_shrinkage = 0 as in the reference implementation).
@@ -1019,6 +1154,7 @@
           runBtn.disabled = busy;
           gpSlider.disabled = busy;
           eventsSlider.disabled = busy;
+          samplerSelect.disabled = busy;
           varianceSlider.disabled = busy;
           showSurrogateCheckbox.disabled = busy;
           showSamplesCheckbox.disabled = busy;
@@ -1045,12 +1181,13 @@
           drawSamples([]);
           drawSurrogate(null);
           await new Promise((r) => setTimeout(r, 35));
-          const result = runSampler(+gpSlider.value, +eventsSlider.value);
+          const result = runSampler(samplerSelect.value, +gpSlider.value, +eventsSlider.value);
           lastResult = result;
           await animateResult(result);
           statStatus.textContent = "done";
           statAccepted.textContent = String(result.accepted);
           statViolations.textContent = String(result.violations);
+          statRefreshes.textContent = result.refreshes === undefined ? "–" : String(result.refreshes);
           setBusy(false);
         }
 
@@ -1066,6 +1203,7 @@
         showSamplesCheckbox.addEventListener("change", () => {
           if (lastResult) drawSamples(showSamplesCheckbox.checked ? lastResult.trainX : []);
         });
+        samplerSelect.addEventListener("change", renderTargetOnly);
         runBtn.addEventListener("click", runInference);
         resetBtn.addEventListener("click", () => {
           means = means0.map((d) => ({ ...d }));
